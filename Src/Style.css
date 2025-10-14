@@ -1,0 +1,89 @@
+/* General Background */
+body {
+  background: radial-gradient(ellipse at bottom, #0a0a25 0%, #000 100%);
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Stars */
+#stars {
+  width: 100%;
+  height: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  background: transparent url('https://www.transparenttextures.com/patterns/stardust.png') repeat;
+  animation: twinkle 8s ease-in-out infinite;
+  z-index: 0;
+  opacity: 0.8;
+}
+@keyframes twinkle {
+  0%,100% {opacity: 0.8;}
+  50% {opacity: 1;}
+}
+/* Shooting Stars */
+.shooting-star {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 180px;
+  height: 2px;
+  background: linear-gradient(90deg, #00ffff, #ff00ff, transparent);
+  border-radius: 50%;
+  opacity: 0;
+  transform: rotate(45deg);
+  pointer-events: none;
+  z-index: 0;
+  animation: shoot 1.6s linear forwards;
+}
+@keyframes shoot {
+  0% { opacity: 1; transform: translate(0, 0) rotate(45deg); }
+  80% { opacity: 0.8; }
+  100% { opacity: 0; transform: translate(800px, 800px) rotate(45deg); }
+}
+
+/* Neon Effects */
+.neon-text-cyan {
+  color: #00ffff;
+  text-shadow: 0 0 10px #00ffff, 0 0 25px #00ffff;
+}
+.neon-text-pink {
+  color: #ff00ff;
+  text-shadow: 0 0 10px #ff00ff, 0 0 25px #ff00ff;
+}
+.neon-text-green {
+  color: #00ffb7;
+  text-shadow: 0 0 10px #00ffb7, 0 0 25px #00ffb7;
+}
+
+/* Animations */
+@keyframes glow {
+  from { text-shadow: 0 0 10px #00ffff; }
+  to { text-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff; }
+}
+.animate-glow {
+  animation: glow 2s ease-in-out infinite alternate;
+}
+.animate-fadein {
+  animation: fadeIn 2s ease forwards;
+}
+@keyframes fadeIn {
+  from {opacity: 0;}
+  to {opacity: 1;}
+}
+
+/* Contact Cards */
+.contact-card {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 120px;
+  border: 2px solid;
+  border-radius: 1.25rem;
+  font-weight: 600;
+  text-shadow: 0 0 8px currentColor;
+  transition: 0.4s;
+}
+.contact-card:hover {
+  transform: scale(1.07);
+  box-shadow: 0 0 25px currentColor;
+}
