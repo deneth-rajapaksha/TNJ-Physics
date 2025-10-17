@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TNJ Physics - Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+    
+    * {
+      font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      background: #0a0a0f;
+      overflow-x: hidden;
+    }
+
+    #starfield {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+
+    .glass {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: scale(1.02);
+      box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .input-field {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: all 0.3s ease;
+    }
+
+    .input-field:focus {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: #6366f1;
+      outline: none;
+    }
+
+    .error-message {
+      animation: shake 0.5s;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-10px); }
+      75% { transform: translateX(10px); }
+    }
+
+    .loading-spinner {
+      border: 3px solid rgba(255,255,255,.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body class="min-h-screen text-white flex items-center justify-center p-4">
+  <canvas id="starfield"></canvas>
+
+  <!-- Login Card -->
+  <div class="relative z-10 w-full max-w-md">
+    <div class="glass rounded-2xl p-8 shadow-2xl">
+      <!-- Logo/Header -->
+      <div class="text-center mb-8">
+        <div class="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-2xl mb-4">
+          TNJ
+        </div>
+        <h1 class="text-2xl font-bold mb-2">TNJ Physics</h1>
+        <p class="text-gray-400 text-sm">Online Learning Platform</p>
+      </div>
+
+      <!-- Login Form -->
+      <form id="loginForm">
+        <div class="space-y-4">
+          <!-- Username Field -->
+          <div>
+            <label for="username" class="block text-sm font-medium mb-2">Username</label>
+            <input 
+              type="text" 
+              id="username" 
+              name="username"
+              class="input-field w-full px-4 py-3 rounded-lg text-white"
+              placeholder="Enter your username"
+              required
+              autocomplete="username"
+            >
+          </div>
+
+          <!-- Password Field -->
+          <div>
+            <label for="password" class="block text-sm font-medium mb-2">Password</label>
+            <input 
+              type="password" 
+              id="password" 
+              name="password"
+              class="input-field w-full px-4 py-3 rounded-lg text-white"
+              placeholder="Enter your password"
+              required
+              autocomplete="current-password"
+            >
+          </div>
+
+          <!-- Error Message -->
+          <div id="errorMessage" class="hidden error-message bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-sm text-red-400">
+          </div>
+
+          <!-- Success Message -->
+          <div id="successMessage" class="hidden bg-green-500/10 border border-green-500/30 rounded-lg p-3 text-sm text-green-400">
+            Login successful! Redirecting...
+          </div>
+
+          <!-- Submit Button -->
+          <button 
+            type="submit" 
+            id="loginBtn"
+            class="btn-primary w-full py-3 rounded-lg font-semibold text-white flex items-center justify-center gap-2"
+          >
+            <span id="btnText">Sign In</span>
+            <div id="btnSpinner" class="loading-spinner hidden"></div>
+          </button>
+        </div>
+      </form>
+
+      <!-- Debug Info (remove in production) -->
+      <div id="debugInfo" class="mt-6 p-3 bg-gray-800/50 rounded-lg text-xs text-gray-400 hidden">
+        <div class="font-semibold mb-1">Debug Info:</div>
+        <div id="debugContent"></div>
+      </div>
+
+      <!-- Footer -->
+      <div class="mt-6 text-center text-xs text-gray-500">
+        <p>For enrolled students only</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // CONFIGURATION
+    // ==========================================
+    const WP_API_URL = 'http://physics-with-tharuka.local/wp-json/tnj/v1';
+    // ==========================================
+
+    // Starfield Background
+    const canvas = document.getElementById('starfield');
+    const ctx = canvas.getContext('2d');
+    let stars = [];
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    function createStars() {
+      stars = [];
+      for (let i = 0; i < 200; i++) {
+        stars.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          radius: Math.random() * 1.5,
+          speed: Math.random() * 0.5 + 0.1
+        });
+      }
+    }
+
+    function drawStars() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = 'white';
+      
+      stars.forEach(star => {
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        star.y += star.speed;
+        if (star.y > canvas.height) {
+          star.y = 0;
+          star.x = Math.random() * canvas.width;
+        }
+      });
+      
+      requestAnimationFrame(drawStars);
+    }
+
+    resizeCanvas();
+    createStars();
+    drawStars();
+    window.addEventListener('resize', () => {
+      resizeCanvas();
+      createStars();
+    });
+
+    // Check if already logged in
+    function checkExistingAuth() {
+      const token = sessionStorage.getItem('tnj_token');
+      const user = sessionStorage.getItem('tnj_user');
+      
+      if (token && user) {
+        console.log('Already authenticated, redirecting to dashboard...');
+        window.location.href = 'dashboard.html';
+      }
+    }
+
+    // Show error message
+    function showError(message) {
+      const errorDiv = document.getElementById('errorMessage');
+      errorDiv.textContent = message;
+      errorDiv.classList.remove('hidden');
+      
+      setTimeout(() => {
+        errorDiv.classList.add('hidden');
+      }, 5000);
+    }
+
+    // Show success message
+    function showSuccess() {
+      document.getElementById('successMessage').classList.remove('hidden');
+      document.getElementById('errorMessage').classList.add('hidden');
+    }
+
+    // Show debug info
+    function showDebug(data) {
+      const debugDiv = document.getElementById('debugInfo');
+      const debugContent = document.getElementById('debugContent');
+      debugContent.innerHTML = `
+        <div>API URL: ${WP_API_URL}/login</div>
+        <div>Response: ${JSON.stringify(data, null, 2)}</div>
+      `;
+      debugDiv.classList.remove('hidden');
+    }
+
+    // Set button loading state
+    function setLoading(isLoading) {
+      const btn = document.getElementById('loginBtn');
+      const btnText = document.getElementById('btnText');
+      const spinner = document.getElementById('btnSpinner');
+      
+      btn.disabled = isLoading;
+      
+      if (isLoading) {
+        btnText.textContent = 'Signing in...';
+        spinner.classList.remove('hidden');
+      } else {
+        btnText.textContent = 'Sign In';
+        spinner.classList.add('hidden');
+      }
+    }
+
+    // Handle login form submission
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!username || !password) {
+        showError('Please enter both username and password');
+        return;
+      }
+
+      setLoading(true);
+      
+      try {
+        console.log('Attempting login to:', `${WP_API_URL}/login`);
+        
+        const response = await fetch(`${WP_API_URL}/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            username: username,
+            password: password
+          })
+        });
+
+        console.log('Response status:', response.status);
+        
+        const data = await response.json();
+        console.log('Response data:', data);
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Login failed');
+        }
+
+        if (data.success && data.token && data.user) {
+          // Store authentication data
+          sessionStorage.setItem('tnj_token', data.token);
+          sessionStorage.setItem('tnj_user', JSON.stringify(data.user));
+          
+          console.log('Login successful! Token saved:', data.token);
+          console.log('User data saved:', data.user);
+          
+          showSuccess();
+          
+          // Redirect after a short delay
+          setTimeout(() => {
+            console.log('Redirecting to dashboard...');
+            window.location.href = 'dashboard.html';
+          }, 1000);
+          
+        } else {
+          throw new Error('Invalid response from server');
+        }
+
+      } catch (error) {
+        console.error('Login error:', error);
+        
+        let errorMessage = 'Login failed. Please try again.';
+        
+        if (error.message.includes('fetch')) {
+          errorMessage = 'Cannot connect to server. Please check your API URL configuration.';
+        } else if (error.message.includes('Invalid')) {
+          errorMessage = 'Invalid username or password';
+        } else {
+          errorMessage = error.message;
+        }
+        
+        showError(errorMessage);
+        showDebug({ error: error.message, stack: error.stack });
+        
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    // Auto-fill for testing (REMOVE IN PRODUCTION!)
+    // Uncomment these lines for quick testing:
+    // document.getElementById('username').value = 'student1';
+    // document.getElementById('password').value = 'your-password';
+
+    // Check if already logged in on page load
+    checkExistingAuth();
+  </script>
+</body>
+</html>

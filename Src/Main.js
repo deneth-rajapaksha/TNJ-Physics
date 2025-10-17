@@ -1,5 +1,5 @@
 document.getElementById("loginBtn").onclick = () => {
-  window.location.href = "/lms/login"; // change to your LMS link
+  window.location.href = "LMS/login.html"; // updated path
 };
 
 document.getElementById("signupBtn").onclick = () => {

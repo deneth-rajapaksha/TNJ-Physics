@@ -1,0 +1,21 @@
+/* styles.css */
+
+/* Neon accent tokens */
+:root{
+  --accent-cyan: #00FFFF;
+  --accent-magenta: #FF00FF;
+}
+
+/* subtle global font smoothing */
+html,body{ -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
+
+/* Small radius tweak for design */
+input:focus { box-shadow: 0 6px 24px rgba(0,0,0,0.45); }
+
+/* Hide canvas when reduced motion is preferred */
+@media (prefers-reduced-motion: reduce) {
+  #starfield { display:none; }
+}
+
+/* tiny utility for neon color outline if needed */
+.neon-outline { box-shadow: 0 0 18px rgba(0,255,255,0.12), 0 0 38px rgba(255,0,255,0.06); }

@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TNJ Physics - Course</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+    
+    * {
+      font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      background: #0a0a0f;
+      overflow-x: hidden;
+    }
+
+    #starfield {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+
+    .glass {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .sidebar {
+      height: calc(100vh - 70px);
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(99, 102, 241, 0.5) rgba(255, 255, 255, 0.05);
+    }
+
+    .sidebar::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .sidebar::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .sidebar::-webkit-scrollbar-thumb {
+      background: rgba(99, 102, 241, 0.5);
+      border-radius: 3px;
+    }
+
+    .lesson-item {
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .lesson-item:hover {
+      background: rgba(99, 102, 241, 0.1);
+    }
+
+    .lesson-item.active {
+      background: rgba(99, 102, 241, 0.2);
+      border-left: 3px solid #6366f1;
+    }
+
+    .lesson-item.completed {
+      opacity: 0.7;
+    }
+
+    .section-header {
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .section-header:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .section-content {
+      max-height: 2000px;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+
+    .section-content.collapsed {
+      max-height: 0;
+    }
+
+    .video-container {
+      position: relative;
+      padding-bottom: 56.25%;
+      height: 0;
+      overflow: hidden;
+      background: #000;
+      border-radius: 12px;
+    }
+
+    .video-container iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover {
+      transform: scale(1.02);
+      box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+    }
+
+    .loading-skeleton {
+      background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
+      background-size: 200% 100%;
+      animation: loading 1.5s ease-in-out infinite;
+    }
+
+    @keyframes loading {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        position: fixed;
+        top: 70px;
+        right: -100%;
+        width: 80%;
+        max-width: 400px;
+        height: calc(100vh - 70px);
+        z-index: 50;
+        transition: right 0.3s ease;
+      }
+
+      .sidebar.open {
+        right: 0;
+      }
+
+      .sidebar-overlay {
+        display: none;
+        position: fixed;
+        top: 70px;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 40;
+      }
+
+      .sidebar-overlay.open {
+        display: block;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen text-white">
+  <canvas id="starfield"></canvas>
+
+  <!-- Navigation -->
+  <nav class="relative z-10 glass sticky top-0">
+    <div class="max-w-full px-6 py-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <button onclick="goBack()" class="p-2 hover:bg-white/5 rounded-lg transition">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+          </button>
+          <div>
+            <h1 id="courseTitle" class="font-bold text-lg">Loading Course...</h1>
+            <p class="text-xs text-gray-400" id="courseProgress">0% complete</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-4">
+          <button onclick="toggleSidebar()" class="md:hidden p-2 hover:bg-white/5 rounded-lg transition">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+          </button>
+          <span id="userName" class="text-sm text-gray-300 hidden md:block">Student</span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Layout -->
+  <div class="relative z-10 flex">
+    <!-- Video Content Area -->
+    <div class="flex-1 p-6 md:pr-0">
+      <div class="max-w-5xl">
+        <!-- Loading State -->
+        <div id="loadingState" class="space-y-6">
+          <div class="loading-skeleton h-96 rounded-2xl"></div>
+          <div class="loading-skeleton h-8 w-3/4 rounded"></div>
+          <div class="loading-skeleton h-4 w-1/2 rounded"></div>
+        </div>
+
+        <!-- Video Player -->
+        <div id="videoSection" class="hidden space-y-6">
+          <div class="video-container">
+            <iframe 
+              id="videoPlayer"
+              src=""
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+              allowfullscreen>
+            </iframe>
+          </div>
+
+          <!-- Lesson Info -->
+          <div class="glass rounded-2xl p-6">
+            <div class="flex items-start justify-between mb-4">
+              <div class="flex-1">
+                <h2 id="lessonTitle" class="text-2xl font-bold mb-2">Lesson Title</h2>
+                <div class="flex items-center gap-4 text-sm text-gray-400">
+                  <span id="lessonDuration">00:00</span>
+                  <span>•</span>
+                  <span id="lessonNumber">Lesson 1</span>
+                </div>
+              </div>
+              <button 
+                id="completeBtn" 
+                onclick="markComplete()"
+                class="btn-primary px-6 py-3 rounded-lg font-semibold text-white flex items-center gap-2"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                Mark Complete
+              </button>
+            </div>
+
+            <!-- Lesson Description -->
+            <div id="lessonDescription" class="text-gray-300 leading-relaxed">
+            </div>
+          </div>
+
+          <!-- Navigation Buttons -->
+          <div class="flex gap-4">
+            <button 
+              id="prevBtn" 
+              onclick="previousLesson()"
+              class="glass px-6 py-3 rounded-lg font-semibold hover:bg-white/10 transition flex items-center gap-2"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+              </svg>
+              Previous
+            </button>
+            <button 
+              id="nextBtn" 
+              onclick="nextLesson()"
+              class="btn-primary px-6 py-3 rounded-lg font-semibold text-white flex items-center gap-2"
+            >
+              Next
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" class="hidden">
+          <div class="glass rounded-2xl p-12 text-center">
+            <svg class="w-16 h-16 mx-auto mb-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <h3 class="text-xl font-bold mb-2">Failed to Load Course</h3>
+            <p class="text-gray-400 mb-6" id="errorMessage">Please try again</p>
+            <button onclick="location.reload()" class="btn-primary px-6 py-3 rounded-lg">
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar Overlay (Mobile) -->
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <!-- Course Curriculum Sidebar -->
+    <div class="sidebar glass w-full md:w-96 p-6">
+      <div class="mb-6">
+        <h3 class="text-lg font-bold mb-2">Course Content</h3>
+        <div class="flex items-center gap-3 text-sm text-gray-400">
+          <span id="sectionCount">0 sections</span>
+          <span>•</span>
+          <span id="lessonCount">0 lessons</span>
+        </div>
+      </div>
+
+      <!-- Course Sections -->
+      <div id="courseSections" class="space-y-4">
+        <!-- Sections will be loaded here -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // CONFIGURATION
+    // ==========================================
+    const WP_API_URL = 'http://physics-with-tharuka.local/wp-json/tnj/v1';
+    // ==========================================
+
+    let courseData = null;
+    let currentLessonIndex = 0;
+    let allLessons = [];
+
+    // Starfield Background
+    const canvas = document.getElementById('starfield');
+    const ctx = canvas.getContext('2d');
+    let stars = [];
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    function createStars() {
+      stars = [];
+      for (let i = 0; i < 200; i++) {
+        stars.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          radius: Math.random() * 1.5,
+          speed: Math.random() * 0.5 + 0.1
+        });
+      }
+    }
+
+    function drawStars() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = 'white';
+      
+      stars.forEach(star => {
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        star.y += star.speed;
+        if (star.y > canvas.height) {
+          star.y = 0;
+          star.x = Math.random() * canvas.width;
+        }
+      });
+      
+      requestAnimationFrame(drawStars);
+    }
+
+    resizeCanvas();
+    createStars();
+    drawStars();
+    window.addEventListener('resize', () => {
+      resizeCanvas();
+      createStars();
+    });
+
+    // Authentication
+    function getAuthToken() {
+      return sessionStorage.getItem('tnj_token');
+    }
+
+    function getUserInfo() {
+      const userStr = sessionStorage.getItem('tnj_user');
+      return userStr ? JSON.parse(userStr) : null;
+    }
+
+    function checkAuth() {
+      const token = getAuthToken();
+      const user = getUserInfo();
+      
+      if (!token || !user) {
+        alert('Please login first');
+        window.location.href = 'login.html';
+        return false;
+      }
+      
+      document.getElementById('userName').textContent = user.name || user.username;
+      return true;
+    }
+
+    // Get course ID from URL
+    function getCourseId() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('id');
+    }
+
+    // Load course data
+    async function loadCourse() {
+      const courseId = getCourseId();
+      if (!courseId) {
+        showError('No course ID provided');
+        return;
+      }
+
+      const token = getAuthToken();
+
+      try {
+        console.log('Loading course:', courseId);
+        const response = await fetch(`${WP_API_URL}/course/${courseId}/lessons`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        console.log('Response status:', response.status);
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Failed to load course');
+        }
+
+        courseData = await response.json();
+        console.log('=== COURSE DATA RECEIVED ===');
+        console.log('Full course data:', courseData);
+        console.log('Number of sections:', courseData.sections ? courseData.sections.length : 0);
+        console.log('Sections array:', courseData.sections);
+
+        if (!courseData.sections || courseData.sections.length === 0) {
+          showError('This course has no sections or lessons yet');
+          return;
+        }
+
+        // Flatten all lessons for easy navigation
+        allLessons = [];
+        courseData.sections.forEach((section, idx) => {
+          console.log(`Section ${idx}:`, section);
+          console.log(`Section ${idx} has ${section.lessons ? section.lessons.length : 0} lessons`);
+          
+          if (section.lessons && Array.isArray(section.lessons)) {
+            section.lessons.forEach(lesson => {
+              allLessons.push(lesson);
+            });
+          }
+        });
+
+        console.log('Total lessons flattened:', allLessons.length);
+        console.log('All lessons array:', allLessons);
+
+        if (allLessons.length === 0) {
+          showError('This course has no lessons yet');
+          return;
+        }
+
+        renderCourse();
+        loadLesson(0);
+
+      } catch (error) {
+        console.error('Error loading course:', error);
+        showError(error.message);
+      }
+    }
+
+    // Render course structure
+    function renderCourse() {
+      document.getElementById('courseTitle').textContent = courseData.title;
+      
+      console.log('=== RENDERING COURSE ===');
+      console.log('Course data:', courseData);
+      console.log('Number of sections:', courseData.sections.length);
+      console.log('Sections:', courseData.sections);
+      
+      // Count total lessons across all sections
+      let totalLessons = 0;
+      courseData.sections.forEach(section => {
+        console.log('Section:', section.title, 'Lessons:', section.lessons);
+        totalLessons += section.lessons.length;
+      });
+      
+      console.log('Total lessons counted:', totalLessons);
+      console.log('allLessons array:', allLessons);
+      
+      document.getElementById('sectionCount').textContent = `${courseData.sections.length} section${courseData.sections.length !== 1 ? 's' : ''}`;
+      document.getElementById('lessonCount').textContent = `${totalLessons} lesson${totalLessons !== 1 ? 's' : ''}`;
+
+      const sectionsContainer = document.getElementById('courseSections');
+      sectionsContainer.innerHTML = '';
+      
+      console.log('Starting to render sections...');
+
+      let lessonGlobalIndex = 0;
+
+      courseData.sections.forEach((section, sectionIndex) => {
+        console.log(`Rendering section ${sectionIndex}:`, section.title);
+        
+        if (!section.lessons || section.lessons.length === 0) {
+          console.warn(`Section ${sectionIndex} has no lessons!`);
+          return; // Skip empty sections
+        }
+        
+        const sectionDiv = document.createElement('div');
+        sectionDiv.className = 'glass rounded-lg overflow-hidden';
+        
+        const completedCount = section.lessons.filter(l => l.completed).length;
+        const totalCount = section.lessons.length;
+
+        let lessonHTML = '';
+        section.lessons.forEach((lesson, lessonIndex) => {
+          const globalIndex = lessonGlobalIndex++;
+          console.log(`  Lesson ${lessonIndex} (global ${globalIndex}):`, lesson.title);
+          
+          lessonHTML += `
+            <div 
+              class="lesson-item p-4 border-t border-white/5 flex items-center gap-3" 
+              onclick="loadLesson(${globalIndex})"
+              data-lesson-index="${globalIndex}"
+            >
+              <div class="w-8 h-8 flex-shrink-0">
+                ${lesson.completed ? 
+                  '<svg class="w-8 h-8 text-green-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>' :
+                  '<div class="w-8 h-8 rounded-full border-2 border-gray-600 flex items-center justify-center text-xs text-gray-400">' + (lessonIndex + 1) + '</div>'
+                }
+              </div>
+              <div class="flex-1">
+                <div class="font-medium text-sm">${lesson.title}</div>
+                <div class="text-xs text-gray-400">${lesson.duration || '00:00'}</div>
+              </div>
+            </div>
+          `;
+        });
+
+        sectionDiv.innerHTML = `
+          <div class="section-header p-4 flex items-center justify-between" onclick="toggleSection(${sectionIndex})">
+            <div class="flex-1">
+              <h4 class="font-semibold mb-1">${section.title || 'Course Content'}</h4>
+              <div class="text-xs text-gray-400">${completedCount}/${totalCount} completed</div>
+            </div>
+            <svg class="w-5 h-5 transition-transform section-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </div>
+          <div class="section-content" id="section-${sectionIndex}">
+            ${lessonHTML}
+          </div>
+        `;
+
+        console.log(`Appending section ${sectionIndex} to container`);
+        sectionsContainer.appendChild(sectionDiv);
+      });
+
+      console.log('Finished rendering sections. Total in DOM:', sectionsContainer.children.length);
+      console.log('=== RENDER COMPLETE ===');
+      updateProgress();
+    }
+
+    // Toggle section collapse
+    function toggleSection(index) {
+      const section = document.getElementById(`section-${index}`);
+      const arrow = section.previousElementSibling.querySelector('.section-arrow');
+      
+      section.classList.toggle('collapsed');
+      arrow.style.transform = section.classList.contains('collapsed') ? 'rotate(-90deg)' : 'rotate(0)';
+    }
+
+    // Load specific lesson
+    function loadLesson(index) {
+      if (index < 0 || index >= allLessons.length) return;
+
+      currentLessonIndex = index;
+      const lesson = allLessons[index];
+
+      console.log('Loading lesson:', lesson);
+
+      // Update video
+      const videoId = extractYouTubeId(lesson.youtube_url);
+      if (videoId) {
+        document.getElementById('videoPlayer').src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+      } else {
+        console.warn('No valid YouTube URL found:', lesson.youtube_url);
+      }
+
+      // Update lesson info
+      document.getElementById('lessonTitle').textContent = lesson.title;
+      document.getElementById('lessonDuration').textContent = lesson.duration || '00:00';
+      document.getElementById('lessonNumber').textContent = `Lesson ${index + 1} of ${allLessons.length}`;
+      document.getElementById('lessonDescription').innerHTML = lesson.description || 'No description available.';
+
+      // Update complete button
+      const completeBtn = document.getElementById('completeBtn');
+      if (lesson.completed) {
+        completeBtn.innerHTML = `
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+          </svg>
+          Completed
+        `;
+        completeBtn.classList.remove('btn-primary');
+        completeBtn.classList.add('bg-green-600');
+      } else {
+        completeBtn.innerHTML = `
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+          Mark Complete
+        `;
+        completeBtn.classList.add('btn-primary');
+        completeBtn.classList.remove('bg-green-600');
+      }
+
+      // Update navigation buttons
+      document.getElementById('prevBtn').disabled = index === 0;
+      document.getElementById('nextBtn').disabled = index === allLessons.length - 1;
+
+      // Update active state in sidebar
+      document.querySelectorAll('.lesson-item').forEach(item => {
+        item.classList.remove('active');
+      });
+      const activeItem = document.querySelector(`[data-lesson-index="${index}"]`);
+      if (activeItem) {
+        activeItem.classList.add('active');
+        activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      // Show video section
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('videoSection').classList.remove('hidden');
+      document.getElementById('errorState').classList.add('hidden');
+
+      // Close mobile sidebar
+      if (window.innerWidth < 768) {
+        const sidebar = document.querySelector('.sidebar');
+        const overlay = document.querySelector('.sidebar-overlay');
+        sidebar.classList.remove('open');
+        overlay.classList.remove('open');
+      }
+    }
+
+    // Extract YouTube video ID
+    function extractYouTubeId(url) {
+      if (!url) return null;
+      const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\?\/]+)/);
+      return match ? match[1] : null;
+    }
+
+    // Mark lesson complete
+    async function markComplete() {
+      const lesson = allLessons[currentLessonIndex];
+      if (lesson.completed) return;
+
+      const token = getAuthToken();
+
+      try {
+        const response = await fetch(`${WP_API_URL}/lesson/${lesson.id}/complete`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) throw new Error('Failed to mark complete');
+
+        lesson.completed = true;
+        renderCourse();
+        loadLesson(currentLessonIndex);
+
+      } catch (error) {
+        console.error('Error marking complete:', error);
+        alert('Failed to mark lesson as complete');
+      }
+    }
+
+    // Navigation
+    function previousLesson() {
+      if (currentLessonIndex > 0) {
+        loadLesson(currentLessonIndex - 1);
+      }
+    }
+
+    function nextLesson() {
+      if (currentLessonIndex < allLessons.length - 1) {
+        loadLesson(currentLessonIndex + 1);
+      }
+    }
+
+    function goBack() {
+      window.location.href = 'dashboard.html';
+    }
+
+    // Update overall progress
+    function updateProgress() {
+      const completed = allLessons.filter(l => l.completed).length;
+      const total = allLessons.length;
+      const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+      document.getElementById('courseProgress').textContent = `${percent}% complete (${completed}/${total} lessons)`;
+    }
+
+    // Toggle mobile sidebar
+    function toggleSidebar() {
+      const sidebar = document.querySelector('.sidebar');
+      const overlay = document.querySelector('.sidebar-overlay');
+      sidebar.classList.toggle('open');
+      overlay.classList.toggle('open');
+    }
+
+    // Show error
+    function showError(message) {
+      document.getElementById('errorMessage').textContent = message;
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('videoSection').classList.add('hidden');
+      document.getElementById('errorState').classList.remove('hidden');
+    }
+
+    // Initialize
+    if (checkAuth()) {
+      loadCourse();
+    }
+  </script>
+</body>
+</html>
