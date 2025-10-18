@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TNJ Physics - Login</title>
+  <title>Physics With Tharuka - Login</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
@@ -91,11 +91,9 @@
     <div class="glass rounded-2xl p-8 shadow-2xl">
       <!-- Logo/Header -->
       <div class="text-center mb-8">
-        <div class="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-2xl mb-4">
-          TNJ
-        </div>
-        <h1 class="text-2xl font-bold mb-2">TNJ Physics</h1>
-        <p class="text-gray-400 text-sm">Online Learning Platform</p>
+        <img src="../Assets/Img/logo.jpeg" alt="Physics With Tharuka Logo" class="w-24 h-24 mx-auto rounded-2xl mb-4 object-cover shadow-lg shadow-indigo-500/30" />
+        <h1 class="text-2xl font-bold mb-2">Physics With Tharuka</h1>
+        <p class="text-gray-400 text-sm">Student Learning Portal</p>
       </div>
 
       <!-- Login Form -->
@@ -346,7 +344,6 @@
         }
         
         showError(errorMessage);
-        showDebug({ error: error.message, stack: error.stack });
         
       } finally {
         setLoading(false);
